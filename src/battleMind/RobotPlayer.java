@@ -1,7 +1,7 @@
 package battleMind;
 import battlecode.common.*;
 
-public strictfp class Directions {
+public strictfp class RobotPlayer {
     static RobotController rc;
 
     static final RobotType[] spawnableRobot = {
@@ -25,7 +25,7 @@ public strictfp class Directions {
     static int[] DefenseFlags = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     //int[] DefenseCoordsX = {ECCords.x - 4, ECCords.x, ECCords.x + 4, ECCords.x + 4, ECCords.x + 4, ECCords.x, ECCords.x - 4, ECCords.x - 4, ECCords.x - 2, ECCords.x + 2, ECCords.x + 2, ECCords.x - 2};
     //int[] DefenseCoordsY = {EcCords.y + 4, EcCords.y + 4, EcCords.y + 4, EcCords.y, EcCords.y - 4, EcCords.y - 4, EcCords.y - 4, EcCords.y, EcCords.y + 2, EcCords.y + 2, EcCords.y - 2, EcCords.y - 2};
-    static int turnCount;
+    static int turnCount = 0;
     static int defenseUnits = 0;
     static int outerDefenseCoded = 0;
     static int innerDefenseCoded = 0;
@@ -38,7 +38,7 @@ public strictfp class Directions {
         while (true) {
             // turnCount +=1;
             try {
-                System.out.println("This" + rc.getType() + " at " + rc.getLocation() + "currently has " + rc.getInfluence() + " influence.");
+                System.out.println("This " + rc.getType() + " at " + rc.getLocation() + " currently has " + rc.getInfluence() + " influence.");
                 switch (rc.getType()) {
                     case ENLIGHTENMENT_CENTER:
                         runCodeEC();
@@ -64,23 +64,27 @@ public strictfp class Directions {
     static void runCodeEC() throws GameActionException {
         // int influence = 20;
         // getRobotCount();
-        rc.getLocation();
-        MapLocation ECCoords = new MapLocation(rc.getLocation);
+
+        // Get the coordinates of the Enlightenment Center, get that coordinates' passability
+        //MapLocation ECCoordsX = rc.getLocation.x;
+        //MapLocation ECCoordsY = rc.getLocation.y;
+        MapLocation ECCords = rc.getLocation();
+        // then spawn a slanderer every 50 or so rounds depending on the passability
 
         if (rc.getRoundNum() % 50 == 1) {
-            if (rc.sensePassability(ECCoords) < 0.3) {
-                if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 150)) {
-                    rc.buildRobot(RobotType.SLANDERER, randomDirection(), 150);
+            if (rc.sensePassability(ECCords) < 0.3) {
+                if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 120)) {
+                    rc.buildRobot(RobotType.SLANDERER, randomDirection(), 120);
                     // Clock.yield();
                 }
-            } else if (rc.sensePassability(ECCoords) < 0.7) {
-                if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 100)) {
-                    rc.buildRobot(RobotType.SLANDERER, randomDirection(), 100);
+            } else if (rc.sensePassability(ECCords) >= 0.3 && rc.sensePassability(ECCords) < 0.7) {
+                if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 80)) {
+                    rc.buildRobot(RobotType.SLANDERER, randomDirection(), 80);
                     // Clock.yield();
                 }
             } else {
-                if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 50)) {
-                    rc.buildRobot(RobotType.SLANDERER, randomDirection(), 50);
+                if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 40)) {
+                    rc.buildRobot(RobotType.SLANDERER, randomDirection(), 40);
                     // Clock.yield();
                 }
             }
@@ -113,12 +117,14 @@ public strictfp class Directions {
     }
     // Code for Politicians
     static void runCodeP() throws GameActionException {
+        int thisID = rc.getID();
 
         if (outerDefenseCoded < 8) {
             rc.setFlag(DefenseFlags[outerDefenseCoded]);
             if (outerDefenseCoded < defenseUnits) {
                 outerDefenseCoded += 1;
             }
+
         } else if (innerDefenseCoded < 4) {
             rc.setFlag(DefenseFlags[innerDefenseCoded] + 8);
             if (innerDefenseCoded + 4 < defenseUnits) {
@@ -126,20 +132,20 @@ public strictfp class Directions {
             }
         }
 
-        if (rc.getFlag() < 8) {
+        if (rc.getFlag(thisID) < 8) {
             for (int loop = 0; loop < 4; loop++) {
                 if (rc.isReady() == false) {
                     Clock.yield();
                 } else {
-                    rc.move(directions[outerDefenseStep[(int) (rc.getFlag())]]);
+                    rc.move(directions[outerDefenseStep[rc.getFlag(thisID)]]);
                 }
             }
-        } else if (rc.getFlag() < 12) {
+        } else if (rc.getFlag(thisID) < 12) {
             for (int loop = 0; loop < 4; loop++) {
                 if (rc.isReady() == false) {
                     Clock.yield();
                 } else {
-                    rc.move(directions[innerDefenseStep[(int) (rc.getFlag() * 2 + 1)]]);
+                    rc.move(directions[innerDefenseStep[(rc.getFlag(thisID) * 2 + 1)]]);
                 }
             }
         }
@@ -173,11 +179,13 @@ public strictfp class Directions {
     }
 
     static Direction randomDirection() {
-        return directions[(Math.random() * spawnableRobot.length)];
+        return directions[(int) (Math.random() * spawnableRobot.length)];
     }
-    static Boolean tryBuild(Direction dir) throws GameActionException {
+    /* static Boolean tryBuild(Direction dir) throws GameActionException {
         rc.detectNearbyRobots(2);
     }
+
+     */
     // if getTeamVotes() > 1500
 }
 
