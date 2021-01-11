@@ -1,6 +1,21 @@
 package battleMind;
 import battlecode.common.*;
 
+class Variables {
+        //int[] DefenseCoordsX = {ECCords.x - 4, ECCords.x, ECCords.x + 4, ECCords.x + 4, ECCords.x + 4, ECCords.x, ECCords.x - 4, ECCords.x - 4, ECCords.x - 2, ECCords.x + 2, ECCords.x + 2, ECCords.x - 2};
+        //int[] DefenseCoordsY = {EcCords.y + 4, EcCords.y + 4, EcCords.y + 4, EcCords.y, EcCords.y - 4, EcCords.y - 4, EcCords.y - 4, EcCords.y, EcCords.y + 2, EcCords.y + 2, EcCords.y - 2, EcCords.y - 2};
+        static int turnCount = 0;
+        static int defenseUnits = 0;
+        static int outerDefenseCoded = 0;
+        static int innerDefenseCoded = 0;
+        static int[] outerDefenseStep = {0, 0, 0, 0, 0, 0, 0, 0};
+        static int[] innerDefenseStep = {0, 0, 0, 0};
+        static int[] DefenseFlags = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+        static int[] slandererPosition = {0, 1, 2, 4, 5, 6};
+        static boolean[] slandererOccupied = {false, false, false, false, false, false}
+}
+
+
 public strictfp class RobotPlayer {
     static RobotController rc;
 
@@ -21,24 +36,23 @@ public strictfp class RobotPlayer {
             Direction.NORTHWEST,
     };
 
-    //
-    static int[] DefenseFlags = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    //int[] DefenseCoordsX = {ECCords.x - 4, ECCords.x, ECCords.x + 4, ECCords.x + 4, ECCords.x + 4, ECCords.x, ECCords.x - 4, ECCords.x - 4, ECCords.x - 2, ECCords.x + 2, ECCords.x + 2, ECCords.x - 2};
-    //int[] DefenseCoordsY = {EcCords.y + 4, EcCords.y + 4, EcCords.y + 4, EcCords.y, EcCords.y - 4, EcCords.y - 4, EcCords.y - 4, EcCords.y, EcCords.y + 2, EcCords.y + 2, EcCords.y - 2, EcCords.y - 2};
-    static int turnCount = 0;
-    static int defenseUnits = 0;
-    static int outerDefenseCoded = 0;
-    static int innerDefenseCoded = 0;
-    static int[] outerDefenseStep = {0, 0, 0, 0, 0, 0, 0, 0};
-    static int[] innerDefenseStep = {0, 0, 0, 0};
+static boolean tryMove(Direction dir) throws GameActionException {
+    System.out.println("Attempting to move " + dir + "; Action cooldown: " + rc.getCooldownTurns());
+    if (rc.canMove(dir)) {
+        rc.move(dir);
+        System.out.println("Move successful");
+        return true;
+    } else return false;
+}
+
     public static void run(RobotController rc) throws GameActionException {
-
+        System.out.println("A " + rc.getType() + " has spawned!");
         // turnCount = 0;
-
+        RobotPlayer.rc = rc;
         while (true) {
             // turnCount +=1;
             try {
-                System.out.println("This " + rc.getType() + " at " + rc.getLocation() + " currently has " + rc.getInfluence() + " influence.");
+                System.out.println("This " + rc.getType() + " at " + rc.getLocation() + " currently has " + rc.getConviction() + " conviction.");
                 switch (rc.getType()) {
                     case ENLIGHTENMENT_CENTER:
                         runCodeEC();
@@ -71,20 +85,25 @@ public strictfp class RobotPlayer {
         MapLocation ECCords = rc.getLocation();
         // then spawn a slanderer every 50 or so rounds depending on the passability
 
-        if (rc.getRoundNum() % 50 == 1) {
-            if (rc.sensePassability(ECCords) < 0.3) {
-                if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 120)) {
-                    rc.buildRobot(RobotType.SLANDERER, randomDirection(), 120);
+        if ((rc.getRoundNum()) % 50 == 0) {
+
+            if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection, 950)) {
+
+                rc.buildRobot(RobotType.SLANDERER, randomDirection, 950);
+
+            } else if (rc.sensePassability(ECCords) < 0.3) {
+                if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 130)) {
+                    rc.buildRobot(RobotType.SLANDERER, randomDirection(), 130);
                     // Clock.yield();
                 }
             } else if (rc.sensePassability(ECCords) >= 0.3 && rc.sensePassability(ECCords) < 0.7) {
-                if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 80)) {
-                    rc.buildRobot(RobotType.SLANDERER, randomDirection(), 80);
+                if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 107)) {
+                    rc.buildRobot(RobotType.SLANDERER, randomDirection(), 107);
                     // Clock.yield();
                 }
             } else {
-                if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 40)) {
-                    rc.buildRobot(RobotType.SLANDERER, randomDirection(), 40);
+                if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 85)) {
+                    rc.buildRobot(RobotType.SLANDERER, randomDirection(), 85);
                     // Clock.yield();
                 }
             }
@@ -99,14 +118,17 @@ public strictfp class RobotPlayer {
                 selectedDirection();
             }
 */
-            if (defenseUnits < 8) {
-                if (rc.canBuildRobot(RobotType.POLITICIAN, directions[defenseUnits], 10)) {
-                    rc.buildRobot(RobotType.POLITICIAN, directions[defenseUnits], 10);
-                    defenseUnits += 1;
 
-            } else if (rc.canBuildRobot(RobotType.POLITICIAN, directions[(int) (defenseUnits - 8)], 20)) {
-                rc.buildRobot(RobotType.POLITICIAN, directions[(int) (defenseUnits - 8)], 20);
-                defenseUnits += 1;
+            if (Variables.defenseUnits < 8) {
+                if (rc.canBuildRobot(RobotType.POLITICIAN, directions[Variables.defenseUnits], 10)) {
+                    rc.buildRobot(RobotType.POLITICIAN, directions[Variables.defenseUnits], 10);
+                    Variables.defenseUnits += 1;
+                    return;
+                }
+            } else if (Variables.defenseUnits >= 8 && (Variables.defenseUnits < 12)) {
+                    if (rc.canBuildRobot(RobotType.POLITICIAN, directions[(int) (Variables.defenseUnits - 8)], 20)) {
+                rc.buildRobot(RobotType.POLITICIAN, directions[(int) (Variables.defenseUnits - 8)], 20);
+                    Variables.defenseUnits += 1;
                 }
             }
 
@@ -119,16 +141,16 @@ public strictfp class RobotPlayer {
     static void runCodeP() throws GameActionException {
         int thisID = rc.getID();
 
-        if (outerDefenseCoded < 8) {
-            rc.setFlag(DefenseFlags[outerDefenseCoded]);
-            if (outerDefenseCoded < defenseUnits) {
-                outerDefenseCoded += 1;
+        if (Variables.outerDefenseCoded < 8) {
+            rc.setFlag(Variables.DefenseFlags[Variables.outerDefenseCoded]);
+            if (Variables.outerDefenseCoded < Variables.defenseUnits) {
+                Variables.outerDefenseCoded += 1;
             }
 
-        } else if (innerDefenseCoded < 4) {
-            rc.setFlag(DefenseFlags[innerDefenseCoded] + 8);
-            if (innerDefenseCoded + 4 < defenseUnits) {
-                innerDefenseCoded += 1;
+        } else if (Variables.innerDefenseCoded < 4) {
+            rc.setFlag(Variables.DefenseFlags[Variables.innerDefenseCoded] + 8);
+            if (Variables.innerDefenseCoded + 4 < Variables.defenseUnits) {
+                Variables.innerDefenseCoded += 1;
             }
         }
 
@@ -137,7 +159,9 @@ public strictfp class RobotPlayer {
                 if (rc.isReady() == false) {
                     Clock.yield();
                 } else {
-                    rc.move(directions[outerDefenseStep[rc.getFlag(thisID)]]);
+                    if (rc.canMove(directions[Variables.outerDefenseStep[rc.getFlag(thisID)]])) {
+                        rc.move(directions[Variables.outerDefenseStep[rc.getFlag(thisID)]]);
+                    }
                 }
             }
         } else if (rc.getFlag(thisID) < 12) {
@@ -145,7 +169,9 @@ public strictfp class RobotPlayer {
                 if (rc.isReady() == false) {
                     Clock.yield();
                 } else {
-                    rc.move(directions[innerDefenseStep[(rc.getFlag(thisID) * 2 + 1)]]);
+                    if (rc.canMove(directions[Variables.innerDefenseStep[rc.getFlag(thisID)]])) {
+                        rc.move(directions[Variables.innerDefenseStep[(rc.getFlag(thisID) * 2 + 1)]]);
+                    }
                 }
             }
         }
