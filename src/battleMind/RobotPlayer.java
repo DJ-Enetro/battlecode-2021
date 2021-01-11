@@ -88,8 +88,8 @@ public strictfp class RobotPlayer {
 
         //Sets up the coordinates to where the muckrakers will form around the Enlightenment Center
 
-        int xMDefenders = {-4, -4, -4, -4, -3, -3, -2, -1, 0, 1, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 3, 3, 2, 1, 0, -1, -2, -3, -3, -4, -4, -4};
-        int yMDefenders = {0, 1, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 3, 3, 2, 1, 0, -1, -2, -3, -3, -4, -4, -4, -4, -4, -4, -4, -3, -3, -2, -1};
+        int[] xMDefenders = {-4, -4, -4, -4, -3, -3, -2, -1, 0, 1, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 3, 3, 2, 1, 0, -1, -2, -3, -3, -4, -4, -4};
+        int[] yMDefenders = {0, 1, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 3, 3, 2, 1, 0, -1, -2, -3, -3, -4, -4, -4, -4, -4, -4, -4, -3, -3, -2, -1};
         int mDefenderInitSpawn = 0;
         // then spawn a slanderer every 50 or so rounds depending on the passability
 
@@ -162,7 +162,7 @@ public strictfp class RobotPlayer {
     }
 
     static MapLocation getLocationFromFlag(int flag) {
-        int x = Math.floor((flag / 128).intValue());
+        int x = (int) Math.floor((flag / 128));
         int y = flag % 128;
 
         MapLocation actualLocation = new MapLocation (x, y);
