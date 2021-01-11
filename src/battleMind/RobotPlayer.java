@@ -1,3 +1,5 @@
+// This code borrows off Battlecode 2021's examplefuncsplayer and Jerry Mao's RobotPlayer from the pathfinding lecture.
+
 package battleMind;
 import battlecode.common.*;
 
@@ -12,7 +14,7 @@ class Variables {
         static int[] innerDefenseStep = {0, 0, 0, 0};
         static int[] DefenseFlags = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
         static int[] slandererPosition = {0, 1, 2, 4, 5, 6};
-        static boolean[] slandererOccupied = {false, false, false, false, false, false}
+        // static boolean[] slandererOccupied = {false, false, false, false, false, false}
 }
 
 
@@ -87,9 +89,9 @@ static boolean tryMove(Direction dir) throws GameActionException {
 
         if ((rc.getRoundNum()) % 50 == 0) {
 
-            if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection, 950)) {
+            if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 950)) {
 
-                rc.buildRobot(RobotType.SLANDERER, randomDirection, 950);
+                rc.buildRobot(RobotType.SLANDERER, randomDirection(), 950);
 
             } else if (rc.sensePassability(ECCords) < 0.3) {
                 if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 130)) {
@@ -204,6 +206,36 @@ static boolean tryMove(Direction dir) throws GameActionException {
         }
     }
 
+// Pathfinding Implementation in progress...
+
+
+    static final double idealPassability = 1.0;
+    static Direction bugDirection = null;
+
+    static void basicBugMovement(MapLocation target) throws GameActionException {
+        Direction d = rc.getLocation().directionTo(target);
+        if (rc.getLocation().equals(target)) {
+
+        } else if (rc.isReady()) {
+            if (rc.canMove(d) && rc.sensePassability(rc.getLocation().add(d)) >= idealPassability) {
+                rc.move(d);
+                bugDirection = null;
+            } else {
+                if (bugDirection == null) {
+                    bugDirection = d;
+                }
+                for (int i = 0; i < 8; i++) {
+                    if (rc.canMove(bugDirection) && rc.sensePassability(rc.getLocation().add(bugDirection)) >= idealPassability) {
+                        rc.move(bugDirection);
+                        bugDirection = bugDirection.rotateRight();
+                        break;
+                    }
+                    bugDirection = bugDirection.rotateLeft();
+                }
+            }
+        }
+    }
+
     static Direction randomDirection() {
         return directions[(int) (Math.random() * spawnableRobot.length)];
     }
@@ -216,8 +248,5 @@ static boolean tryMove(Direction dir) throws GameActionException {
 }
 
 
-/* Current Problems: selectedDirection and myFlag
-
-how to define these variables in a way the code does not return errors?
-Lines 67, 87/90, 127
+/* Current Problems:
  */
