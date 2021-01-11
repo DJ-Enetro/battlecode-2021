@@ -38,14 +38,14 @@ public strictfp class RobotPlayer {
             Direction.NORTHWEST,
     };
 
-static boolean tryMove(Direction dir) throws GameActionException {
-    System.out.println("Attempting to move " + dir + "; Action cooldown: " + rc.getCooldownTurns());
-    if (rc.canMove(dir)) {
-        rc.move(dir);
-        System.out.println("Move successful");
-        return true;
-    } else return false;
-}
+    static boolean tryMove(Direction dir) throws GameActionException {
+        System.out.println("Attempting to move " + dir + "; Action cooldown: " + rc.getCooldownTurns());
+        if (rc.canMove(dir)) {
+            rc.move(dir);
+            System.out.println("Move successful");
+            return true;
+        } else return false;
+    }
 
     public static void run(RobotController rc) throws GameActionException {
         System.out.println("A " + rc.getType() + " has spawned!");
@@ -54,7 +54,7 @@ static boolean tryMove(Direction dir) throws GameActionException {
         while (true) {
             // turnCount +=1;
             try {
-                System.out.println("This " + rc.getType() + " at " + rc.getLocation() + " currently has " + rc.getConviction() + " conviction.");
+                System.out.println("This " + rc.getType() + " at " + rc.getLocation() + " currently has " + rc.getConviction() + " conviction. (ID #" + rc.getID() + ")");
                 switch (rc.getType()) {
                     case ENLIGHTENMENT_CENTER:
                         runCodeEC();
@@ -85,6 +85,12 @@ static boolean tryMove(Direction dir) throws GameActionException {
         //MapLocation ECCoordsX = rc.getLocation.x;
         //MapLocation ECCoordsY = rc.getLocation.y;
         MapLocation ECCords = rc.getLocation();
+
+        //Sets up the coordinates to where the muckrakers will form around the Enlightenment Center
+
+        int xMDefenders = {-4, -4, -4, -4, -3, -3, -2, -1, 0, 1, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 3, 3, 2, 1, 0, -1, -2, -3, -3, -4, -4, -4};
+        int yMDefenders = {0, 1, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 3, 3, 2, 1, 0, -1, -2, -3, -3, -4, -4, -4, -4, -4, -4, -4, -3, -3, -2, -1};
+        int mDefenderInitSpawn = 0;
         // then spawn a slanderer every 50 or so rounds depending on the passability
 
         if ((rc.getRoundNum()) % 50 == 0) {
@@ -110,7 +116,8 @@ static boolean tryMove(Direction dir) throws GameActionException {
                 }
             }
         }
-/*
+
+    /***
         while (defenseUnits < 12) {
                 static Direction selectedDirection() {
                     return randomDirection();
@@ -119,7 +126,7 @@ static boolean tryMove(Direction dir) throws GameActionException {
             while (rc.isLocationOccupied(rc.adjacentLocation(selectedDirection())) != true) {
                 selectedDirection();
             }
-*/
+    ***/
 
             if (Variables.defenseUnits < 8) {
                 if (rc.canBuildRobot(RobotType.POLITICIAN, directions[Variables.defenseUnits], 10)) {
@@ -133,12 +140,52 @@ static boolean tryMove(Direction dir) throws GameActionException {
                     Variables.defenseUnits += 1;
                 }
             }
-
-        if (rc.canBid(1)) {
-            rc.bid(1);
+        // Code that makes the bot bid 2 influence for a vote 1/3 of the time
+        if (Math.random() > (2/3)) {
+            if (rc.canBid(2)) {
+                rc.bid(2);
+            }
+        } else {
+            if (rc.canBid(1)) {
+                rc.bid(1);
+            }
         }
         // implement else code here?
     }
+
+    static void sendLocation(MapLocation location) throws GameActionException {
+        int x = location.x, y = location.y;
+        int encodedLocation = x * 128 + y;
+        if (rc.canSetFlag(encodedLocation)) {
+            rc.setFlag(encodedLocation);
+        }
+    }
+
+    static MapLocation getLocationFromFlag(int flag) {
+        int x = Math.floor((flag / 128).intValue());
+        int y = flag % 128;
+
+        MapLocation actualLocation = new MapLocation (x, y);
+        MapLocation alternative = actualLocation.translate(-64, 0);
+        if (rc.getLocation().distanceSquaredTo(alternative) < rc.getLocation().distanceSquaredTo(actualLocation)) {
+            actualLocation = alternative;
+        }
+        alternative = actualLocation.translate(64, 0);
+        if (rc.getLocation().distanceSquaredTo(alternative) < rc.getLocation().distanceSquaredTo(actualLocation)) {
+            actualLocation = alternative;
+        }
+        alternative = actualLocation.translate(0, 64);
+        if (rc.getLocation().distanceSquaredTo(alternative) < rc.getLocation().distanceSquaredTo(actualLocation)) {
+            actualLocation = alternative;
+        }
+        alternative = actualLocation.translate(0, -64);
+        if (rc.getLocation().distanceSquaredTo(alternative) < rc.getLocation().distanceSquaredTo(actualLocation)) {
+            actualLocation = alternative;
+        }
+        return actualLocation;
+    }
+
+
     // Code for Politicians
     static void runCodeP() throws GameActionException {
         int thisID = rc.getID();
@@ -193,14 +240,32 @@ static boolean tryMove(Direction dir) throws GameActionException {
         }
         */
     }
+
     // Code for Slanderers
     static void runCodeS() throws GameActionException {
         if (rc.isReady() == false) {
             Clock.yield();
         }
     }
+
+    static int ecID = -1;
+    static MapLocation pMovementDestination = null;
+
     // Code for Muckrakers
     static void runCodeM() throws GameActionException {
+        if (ecID == -1) {
+            for (RobotInfo robot : rc.senseNearbyRobots(-1, rc.getTeam())) {
+                if (robot.type == RobotType.ENLIGHTENMENT_CENTER) {
+                    ecID = robot.ID;
+                }
+            }
+        }
+        if (rc.canGetFlag(ecID)) {
+            pMovementDestination = getLocationFromFlag(rc.getFlag(ecID));
+        }
+        if (pMovementDestination != null) {
+            basicBugMovement(pMovementDestination);
+        }
         if (rc.isReady() == false) {
             Clock.yield();
         }
