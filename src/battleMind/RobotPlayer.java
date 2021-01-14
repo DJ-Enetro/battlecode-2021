@@ -7,13 +7,15 @@ class Variables {
         //int[] DefenseCoordsX = {ECCords.x - 4, ECCords.x, ECCords.x + 4, ECCords.x + 4, ECCords.x + 4, ECCords.x, ECCords.x - 4, ECCords.x - 4, ECCords.x - 2, ECCords.x + 2, ECCords.x + 2, ECCords.x - 2};
         //int[] DefenseCoordsY = {EcCords.y + 4, EcCords.y + 4, EcCords.y + 4, EcCords.y, EcCords.y - 4, EcCords.y - 4, EcCords.y - 4, EcCords.y, EcCords.y + 2, EcCords.y + 2, EcCords.y - 2, EcCords.y - 2};
         static int turnCount = 0;
-        static int defenseUnits = 0;
         static int outerDefenseCoded = 0;
         static int innerDefenseCoded = 0;
-        static int[] outerDefenseStep = {0, 0, 0, 0, 0, 0, 0, 0};
-        static int[] innerDefenseStep = {0, 0, 0, 0};
-        static int[] DefenseFlags = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+        // static int[] outerDefenseStep = {0, 0, 0, 0, 0, 0, 0, 0};
+        // static int[] innerDefenseStep = {0, 0, 0, 0};
+        // static int[] DefenseFlags = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+
         static int[] slandererPosition = {0, 1, 2, 4, 5, 6};
+        static int mDefenderInitSpawn = 0;
+        static int pDefenseUnits = 0;
         // static boolean[] slandererOccupied = {false, false, false, false, false, false}
 }
 
@@ -38,17 +40,8 @@ public strictfp class RobotPlayer {
             Direction.NORTHWEST,
     };
 
-    static boolean tryMove(Direction dir) throws GameActionException {
-        System.out.println("Attempting to move " + dir + "; Action cooldown: " + rc.getCooldownTurns());
-        if (rc.canMove(dir)) {
-            rc.move(dir);
-            System.out.println("Move successful");
-            return true;
-        } else return false;
-    }
 
     public static void run(RobotController rc) throws GameActionException {
-        System.out.println("A " + rc.getType() + " has spawned!");
         // turnCount = 0;
         RobotPlayer.rc = rc;
         while (true) {
@@ -82,82 +75,138 @@ public strictfp class RobotPlayer {
         // getRobotCount();
 
         // Get the coordinates of the Enlightenment Center, get that coordinates' passability
-        //MapLocation ECCoordsX = rc.getLocation.x;
-        //MapLocation ECCoordsY = rc.getLocation.y;
+
         MapLocation ECCords = rc.getLocation();
 
         //Sets up the coordinates to where the muckrakers will form around the Enlightenment Center
 
         int[] xMDefenders = {-4, -4, -4, -4, -3, -3, -2, -1, 0, 1, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 3, 3, 2, 1, 0, -1, -2, -3, -3, -4, -4, -4};
         int[] yMDefenders = {0, 1, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 3, 3, 2, 1, 0, -1, -2, -3, -3, -4, -4, -4, -4, -4, -4, -4, -3, -3, -2, -1};
-        int mDefenderInitSpawn = 0;
+        int[] xPDefenders = {-8, 0, 8, 8, 8, 0, -8, -8};
+        int[] yPDefenders = {8, 8, 8, 0, -8, -8, -8, 0};
+
+        boolean sBuilt = true;
         // then spawn a slanderer every 50 or so rounds depending on the passability
+        Direction selectedDirection = randomDirection();
+        int spawnRobot = (int) Math.floor((rc.getRoundNum() - 1) / rc.sensePassability(ECCords));
 
-        if ((rc.getRoundNum()) % 50 == 0) {
+// Spawning initial slanderer
 
-            if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 950)) {
-
-                rc.buildRobot(RobotType.SLANDERER, randomDirection(), 950);
-
-            } else if (rc.sensePassability(ECCords) < 0.3) {
-                if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 130)) {
-                    rc.buildRobot(RobotType.SLANDERER, randomDirection(), 130);
+        if ((rc.getRoundNum()) == 1) {
+            if (rc.sensePassability(ECCords) < 0.3) {
+                if (rc.canBuildRobot(RobotType.SLANDERER, selectedDirection, 130)) {
+                    rc.buildRobot(RobotType.SLANDERER, selectedDirection, 130);
+                    System.out.println("A slanderer has spawned!");
                     // Clock.yield();
                 }
             } else if (rc.sensePassability(ECCords) >= 0.3 && rc.sensePassability(ECCords) < 0.7) {
-                if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 107)) {
-                    rc.buildRobot(RobotType.SLANDERER, randomDirection(), 107);
+                if (rc.canBuildRobot(RobotType.SLANDERER, selectedDirection, 107)) {
+                    rc.buildRobot(RobotType.SLANDERER, selectedDirection, 107);
+                    System.out.println("A slanderer has spawned!");
                     // Clock.yield();
                 }
             } else {
-                if (rc.canBuildRobot(RobotType.SLANDERER, randomDirection(), 85)) {
-                    rc.buildRobot(RobotType.SLANDERER, randomDirection(), 85);
+                if (rc.canBuildRobot(RobotType.SLANDERER, selectedDirection, 85)) {
+                    rc.buildRobot(RobotType.SLANDERER, selectedDirection, 85);
+                    System.out.println("A slanderer has spawned!");
                     // Clock.yield();
                 }
             }
         }
 
-    /***
-        while (defenseUnits < 12) {
-                static Direction selectedDirection() {
-                    return randomDirection();
-            }
+        // Spawns a new slanderer every 50-60 rounds depending on passability
 
-            while (rc.isLocationOccupied(rc.adjacentLocation(selectedDirection())) != true) {
-                selectedDirection();
-            }
-    ***/
+        if ((rc.canBuildRobot(RobotType.MUCKRAKER, selectedDirection, 1)) && (spawnRobot % 15 == 1)) {
+            sBuilt = false;
 
-            if (Variables.defenseUnits < 8) {
-                if (rc.canBuildRobot(RobotType.POLITICIAN, directions[Variables.defenseUnits], 10)) {
-                    rc.buildRobot(RobotType.POLITICIAN, directions[Variables.defenseUnits], 10);
-                    Variables.defenseUnits += 1;
-                    return;
-                }
-            } else if (Variables.defenseUnits >= 8 && (Variables.defenseUnits < 12)) {
-                    if (rc.canBuildRobot(RobotType.POLITICIAN, directions[(int) (Variables.defenseUnits - 8)], 20)) {
-                rc.buildRobot(RobotType.POLITICIAN, directions[(int) (Variables.defenseUnits - 8)], 20);
-                    Variables.defenseUnits += 1;
+            if (rc.canBuildRobot(RobotType.SLANDERER, selectedDirection, 950)) {
+                rc.buildRobot(RobotType.SLANDERER, selectedDirection, 950);
+                System.out.println("A slanderer has spawned!");
+            } else {
+                for (Direction dir : directions) {
+                    if (rc.canBuildRobot(RobotType.SLANDERER, dir, 950)) {
+                        rc.buildRobot(RobotType.SLANDERER, dir, 950);
+                        System.out.println("A slanderer has spawned!");
+                        sBuilt = true;
+                        break;
+                    }
                 }
             }
+        }
+
+
+
+        if ((Variables.pDefenseUnits < 8) && (spawnRobot % 3 == 1)) {
+            MapLocation xyPDefenders = new MapLocation(xPDefenders[Variables.pDefenseUnits] + ECCords.x, yPDefenders[Variables.pDefenseUnits] + ECCords.y);
+
+            if (rc.canBuildRobot(RobotType.POLITICIAN, randomDirection(), 10)) {
+                rc.buildRobot(RobotType.POLITICIAN, randomDirection(), 10);
+                System.out.println("A politician has spawned!");
+                sendLocation(xyPDefenders);
+                Variables.pDefenseUnits += 1;
+
+            } else {
+                for (Direction dir : directions) {
+                    if (rc.canBuildRobot(RobotType.POLITICIAN, dir, 10)) {
+                        rc.buildRobot(RobotType.POLITICIAN, dir, 10);
+                        System.out.println("A politician has spawned!");
+                        sendLocation(xyPDefenders);
+                        Variables.pDefenseUnits += 1;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if ((spawnRobot % 4 == 0) && (Variables.mDefenderInitSpawn < 32)) {
+            MapLocation xyMDefenders = new MapLocation(xMDefenders[Variables.mDefenderInitSpawn] + ECCords.x, yMDefenders[Variables.mDefenderInitSpawn] + ECCords.y);
+
+            if (rc.canBuildRobot(RobotType.MUCKRAKER, selectedDirection, 1)) {
+
+                rc.buildRobot(RobotType.MUCKRAKER, selectedDirection, 1);
+                System.out.println("A muckraker has spawned!");
+                sendLocation(xyMDefenders);
+                Variables.mDefenderInitSpawn += 1;
+
+            } else {
+
+                for (Direction dir : directions) {
+
+                    if (rc.canBuildRobot(RobotType.MUCKRAKER, dir, 1)) {
+
+                        rc.buildRobot(RobotType.MUCKRAKER, dir, 1);
+                        System.out.println("A muckraker has spawned!");
+                        sendLocation(xyMDefenders);
+                        Variables.mDefenderInitSpawn += 1;
+                        break;
+
+                    }
+                }
+            }
+        }
+
         // Code that makes the bot bid 2 influence for a vote 1/3 of the time
-        if (Math.random() > (2/3)) {
+        if (Math.floor(Math.random() * 30) > 19) {
             if (rc.canBid(2)) {
                 rc.bid(2);
+                System.out.println("Bidding 2 influence for this round's vote...");
             }
         } else {
             if (rc.canBid(1)) {
                 rc.bid(1);
+                System.out.println("Bidding 1 influence for this round's vote...");
             }
         }
         // implement else code here?
     }
+
 
     static void sendLocation(MapLocation location) throws GameActionException {
         int x = location.x, y = location.y;
         int encodedLocation = x * 128 + y;
         if (rc.canSetFlag(encodedLocation)) {
             rc.setFlag(encodedLocation);
+            Clock.yield();
         }
     }
 
@@ -188,42 +237,51 @@ public strictfp class RobotPlayer {
 
     // Code for Politicians
     static void runCodeP() throws GameActionException {
-        int thisID = rc.getID();
+        int thisID = -1;
+        int ecID = -1;
+        MapLocation ECCords = null;
+        int roundOfCreation = -1;
+        MapLocation pMovementDestination = null;
+        MapLocation here = null;
 
-        if (Variables.outerDefenseCoded < 8) {
-            rc.setFlag(Variables.DefenseFlags[Variables.outerDefenseCoded]);
-            if (Variables.outerDefenseCoded < Variables.defenseUnits) {
-                Variables.outerDefenseCoded += 1;
+        if (here == null) {
+            here = rc.getLocation();
+            System.out.println("Location set!");
+        }
+
+        // This code accounts for the initial action cooldown of 10
+        int initialDelay = 10;
+        if (initialDelay >= 1) {
+            initialDelay -= 1;
+        }
+
+        if (ecID == -1) {
+            for (RobotInfo robot : rc.senseNearbyRobots(2, rc.getTeam())) {
+                if (robot.type == RobotType.ENLIGHTENMENT_CENTER) {
+                    ecID = robot.ID;
+                    ECCords = robot.location;
+                }
             }
-
-        } else if (Variables.innerDefenseCoded < 4) {
-            rc.setFlag(Variables.DefenseFlags[Variables.innerDefenseCoded] + 8);
-            if (Variables.innerDefenseCoded + 4 < Variables.defenseUnits) {
-                Variables.innerDefenseCoded += 1;
+        } else {
+            if (ECCords.isAdjacentTo(ECCords)) {
+                tryMove((here.directionTo(ECCords)).opposite());
             }
         }
 
-        if (rc.getFlag(thisID) < 8) {
-            for (int loop = 0; loop < 4; loop++) {
-                if (rc.isReady() == false) {
-                    Clock.yield();
-                } else {
-                    if (rc.canMove(directions[Variables.outerDefenseStep[rc.getFlag(thisID)]])) {
-                        rc.move(directions[Variables.outerDefenseStep[rc.getFlag(thisID)]]);
-                    }
-                }
-            }
-        } else if (rc.getFlag(thisID) < 12) {
-            for (int loop = 0; loop < 4; loop++) {
-                if (rc.isReady() == false) {
-                    Clock.yield();
-                } else {
-                    if (rc.canMove(directions[Variables.innerDefenseStep[rc.getFlag(thisID)]])) {
-                        rc.move(directions[Variables.innerDefenseStep[(rc.getFlag(thisID) * 2 + 1)]]);
-                    }
-                }
-            }
+        if (roundOfCreation == -1) {
+            roundOfCreation = rc.getRoundNum();
         }
+
+        if (rc.canGetFlag(ecID)) {
+            pMovementDestination = getLocationFromFlag(rc.getFlag(ecID));
+        }
+
+
+
+        if (pMovementDestination != null) {
+            basicBugMovement(pMovementDestination);
+        }
+
 
         /*
         myFlag = this.getFlag();
@@ -243,23 +301,71 @@ public strictfp class RobotPlayer {
 
     // Code for Slanderers
     static void runCodeS() throws GameActionException {
-        if (rc.isReady() == false) {
-            Clock.yield();
+        MapLocation ECCords = null;
+        int ecID = -1;
+        MapLocation pMovementDestination = null;
+        MapLocation here = null;
+
+        if (here == null) {
+            here = rc.getLocation();
+        }
+
+        if (ecID == -1) {
+            for (RobotInfo robot : rc.senseNearbyRobots(2, rc.getTeam())) {
+                if (robot.type == RobotType.ENLIGHTENMENT_CENTER) {
+                    ecID = robot.ID;
+                    ECCords = robot.location;
+                }
+            }
+        } else {
+
+            if (ECCords.isAdjacentTo(ECCords)) {
+                tryMove((here.directionTo(ECCords)).opposite());
+            }
+        }
+
+
+        if (rc.canGetFlag(ecID)) {
+            pMovementDestination = getLocationFromFlag(rc.getFlag(ecID));
+        }
+        if (pMovementDestination != null) {
+            basicBugMovement(pMovementDestination);
         }
     }
 
-    static int ecID = -1;
-    static MapLocation pMovementDestination = null;
 
     // Code for Muckrakers
     static void runCodeM() throws GameActionException {
+        int initialDelay = 10;
+        if (initialDelay >= 1) {
+            initialDelay -= 1;
+            Clock.yield();
+        }
+
+        int ecID = -1;
+        MapLocation pMovementDestination = null;
+        MapLocation ECCords = null;
+        MapLocation here = null;
+
+        if (here == null) {
+            here = rc.getLocation();
+        }
+
         if (ecID == -1) {
-            for (RobotInfo robot : rc.senseNearbyRobots(-1, rc.getTeam())) {
+            for (RobotInfo robot : rc.senseNearbyRobots(2, rc.getTeam())) {
                 if (robot.type == RobotType.ENLIGHTENMENT_CENTER) {
                     ecID = robot.ID;
+                    ECCords = robot.location;
                 }
             }
+        } else {
+            // If adjacent to an Enlightenment center, will move one space from it to make room for more robots to spawn
+            if (here.isAdjacentTo(ECCords)) {
+                tryMove((here.directionTo(ECCords)).opposite());
+            }
         }
+
+
         if (rc.canGetFlag(ecID)) {
             pMovementDestination = getLocationFromFlag(rc.getFlag(ecID));
         }
@@ -273,6 +379,16 @@ public strictfp class RobotPlayer {
 
 // Pathfinding Implementation in progress...
 
+    static boolean tryMove(Direction dir) throws GameActionException {
+       System.out.println("Attempting to move " + dir + "; Action cooldown: " + rc.getCooldownTurns());
+       if (rc.canMove(dir)) {
+           rc.move(dir);
+           System.out.println("Move successful");
+           return true;
+       } else return false;
+   }
+
+
 
     static final double idealPassability = 1.0;
     static Direction bugDirection = null;
@@ -282,25 +398,35 @@ public strictfp class RobotPlayer {
         if (rc.getLocation().equals(target)) {
 
         } else if (rc.isReady()) {
-            if (rc.canMove(d) && rc.sensePassability(rc.getLocation().add(d)) >= idealPassability) {
-                rc.move(d);
+            if (rc.sensePassability(rc.getLocation().add(d)) >= idealPassability) {
+                System.out.println("Attempting to move " + d + "; Action cooldown: " + rc.getCooldownTurns());
+
+                if (rc.canMove(d)) {
+
+                    rc.move(d);
+                    System.out.println("Move successful");
+                }
+
                 bugDirection = null;
             } else {
                 if (bugDirection == null) {
                     bugDirection = d;
                 }
                 for (int i = 0; i < 8; i++) {
-                    if (rc.canMove(bugDirection) && rc.sensePassability(rc.getLocation().add(bugDirection)) >= idealPassability) {
-                        rc.move(bugDirection);
-                        bugDirection = bugDirection.rotateRight();
-                        break;
+                    if (rc.sensePassability(rc.getLocation().add(bugDirection)) >= idealPassability) {
+                        System.out.println("Attempting to move " + bugDirection + "; Action cooldown: " + rc.getCooldownTurns());
+                        if (rc.canMove(bugDirection)) {
+                            rc.move(bugDirection);
+                            System.out.println("Move successful");
+                            bugDirection = bugDirection.rotateRight();
+                            break;
+                        }
+                        bugDirection = bugDirection.rotateLeft();
                     }
-                    bugDirection = bugDirection.rotateLeft();
                 }
             }
         }
     }
-
     static Direction randomDirection() {
         return directions[(int) (Math.random() * spawnableRobot.length)];
     }
