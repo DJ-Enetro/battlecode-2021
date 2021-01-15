@@ -7,7 +7,7 @@ public strictfp class RobotPlayer {
     static final RobotType[] spawnableRobot = {
         RobotType.POLITICIAN,
         RobotType.SLANDERER,
-        RobotType.MUCKRAKER,
+
     };
 
     static final Direction[] directions = {
