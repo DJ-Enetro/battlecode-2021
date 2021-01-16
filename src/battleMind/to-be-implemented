@@ -1,7 +1,0 @@
-to-do list:
-
-resolve the NullPointerException:
-
-java.lang.NullPointerException
-at battleMind.RobotPlayer.runCodeEC(RobotPlayer.java:71)
-at battleMind.RobotPlayer.run(RobotPlayer.java:44)
