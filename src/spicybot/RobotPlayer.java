@@ -3,6 +3,7 @@
 package spicybot;
 import battlecode.common.*;
 import java.util.*;
+import java.lang.*;
 
 class Variables {
     //int[] DefenseCoordsX = {ECCords.x - 4, ECCords.x, ECCords.x + 4, ECCords.x + 4, ECCords.x + 4, ECCords.x, ECCords.x - 4, ECCords.x - 4, ECCords.x - 2, ECCords.x + 2, ECCords.x + 2, ECCords.x - 2};
@@ -125,18 +126,6 @@ public strictfp class RobotPlayer {
 
     //keeps track of all our robots and which type they are
     static Map <Integer, RobotType> allBotsMap = new HashMap<>();
-
-    //two ways of making a robot, depending whether you care about the direction or not
-    //NOT READY YET
-    /*
-    static void makeRobot(RobotType type, int roleID) throws GameActionException{
-
-        Direction selectedDirection = randomDirection();
-        if (rc.canBuildRobot(RobotType.SLANDERER, selectedDirection, 130)) {
-            rc.buildRobot(RobotType.SLANDERER, selectedDirection, 130);
-        }
-    }
-    */
 
     //TODO optimize this
     //make robots for you, one of them if you know which direction and the other if you don't care the direction
@@ -357,9 +346,147 @@ public strictfp class RobotPlayer {
         return actualLocation;
     }
 
+    //where the robot will store the passability of all squares it sees
+    static Map<MapLocation, Double> passabilityMap = new HashMap<>();
+
+    //given a location, return all the location adjecent to that one (without using add())
+    static Set<MapLocation> getAdjacent(MapLocation location){
+        Set<MapLocation> adjacent = new HashSet<>();
+        System.out.println("bytes1 " + Clock.getBytecodeNum());
+        int xCord = location.x;
+        int yCord = location.y;
+        System.out.println("bytes2 " + Clock.getBytecodeNum());
+        for (int i = -1; i <= 1; i++){
+            int x = xCord + i;
+
+            for (int j = -1; j <= 1; j++){
+                adjacent.add(new MapLocation(x, yCord + j));
+            }
+        }
+        System.out.println("bytes3 " + Clock.getBytecodeNum());
+        adjacent.remove(location);
+        return adjacent;
+    }
+
+    static int getSensingDistanceSquared(RobotType type){
+        int sensingDistanceSquared = 0;
+        switch (type){
+            case MUCKRAKER:
+                sensingDistanceSquared = 30;
+                break;
+            case SLANDERER:
+                sensingDistanceSquared = 20;
+                break;
+            case POLITICIAN:
+                sensingDistanceSquared = 25;
+                break;
+            case ENLIGHTENMENT_CENTER:
+                sensingDistanceSquared = 40;
+                break;
+        }
+        return sensingDistanceSquared;
+    }
+    //finds the farthest location that the robot can sense in the given direction
+    static MapLocation findFarthest(Direction direction, MapLocation startingLocation, RobotType type){
+        int sensingDistanceSquared = getSensingDistanceSquared(type);
+        int goalDistance = 0;
+        MapLocation goal = startingLocation;
+        MapLocation tempGoal = goal;
+        while(goalDistance < sensingDistanceSquared){
+            goal = tempGoal;
+            tempGoal = tempGoal.add(direction);
+            goalDistance = tempGoal.distanceSquaredTo(startingLocation);
+        }
+        System.out.println("goal distance, " + goalDistance + "sensingDIstanceSquared, " + sensingDistanceSquared);
+        return goal;
+
+    }
+
+
+    static RobotInfo[] moveTowards(Direction direction, RobotType type) throws GameActionException {
+        int sensingDistanceSquared = getSensingDistanceSquared(type);
+
+        Map<MapLocation, Double> agenda = new HashMap<>();
+        Set<MapLocation> expanded = new HashSet<>();
+        Map<MapLocation, MapLocation> children = new HashMap<>();
+
+        MapLocation startingLocation = rc.getLocation();
+        MapLocation current = startingLocation;
+
+
+        //we need to sense the location of all robot around us to see if there are any of them blocking our path
+        //since sensing this is relatively expensive and our function doesn't have to return anything, just move,
+        // we will return the information that we get from the sensing so whichever function called us can use it without wasting more bytes calling it again
+        RobotInfo[] robotsNearby = rc.senseNearbyRobots();
+        //if the robot is in a position right next to our starting position, we add it to the expanded set so that
+        //our robot can't consider moving into it. If the robot isn't immediately right next to ours, that means he could
+        //move next round, so we won't concern ourselves with his location yet
+        for (RobotInfo eachRobot : robotsNearby){
+            if (eachRobot.location.distanceSquaredTo(startingLocation) == 2){
+                expanded.add(eachRobot.location);
+            }
+        }
+
+        //finds our goal location which is the farthest location that the robot can sense in the given direction
+        MapLocation goal = findFarthest(direction, startingLocation, type);
+
+        //repeats until we find a path that gets to the goal
+        while (!goal.equals(current)){
+            //finds and gets the location in the agenda with the smallest cooldown
+            double smallest = 10000;
+            for (MapLocation agendaLocation : agenda.keySet() ){
+                double cooldown = agenda.get(agendaLocation);
+                if (cooldown + Math.sqrt(agendaLocation.distanceSquaredTo(goal)) < smallest) {
+                    smallest = cooldown;
+                    current = agendaLocation;
+                }
+            }
+            agenda.remove(current);
+            expanded.add(current);
+            Set<MapLocation> adjacent = getAdjacent(current);
+
+            //will add the children to the agenda if we have their passability
+            for (MapLocation eachAdjacent : adjacent){
+                //will only add them if they haven't been considered already (expanded) or if they weren't added already
+                if ((! expanded.contains(eachAdjacent)) && (!agenda.containsKey(eachAdjacent))){
+                    //if we haven't found this square's passability yet but we can, find it and save it to the passabilityMap
+                    if ((!passabilityMap.containsKey(eachAdjacent)) && (startingLocation.distanceSquaredTo(eachAdjacent) <= sensingDistanceSquared)){
+                        passabilityMap.put(eachAdjacent, rc.sensePassability(eachAdjacent));
+                    }
+                    //if we don't have the passability of this square, we can't consider it and add it to the agenda
+                    if (passabilityMap.containsKey(eachAdjacent)){
+                        children.put(eachAdjacent, current);
+                        agenda.put(eachAdjacent, smallest + (1/passabilityMap.get(eachAdjacent)));
+                    }
+                }
+            }
+            if (agenda.isEmpty()){
+                System.out.println("Couldn't find somewhere to move!");
+                return robotsNearby;
+            }
+        }
+        MapLocation movingTo = current;
+        while (!current.equals(startingLocation)){
+            movingTo = current;
+            current = children.get(current);
+        }
+        Direction movingDirection = startingLocation.directionTo(movingTo);
+
+        if (rc.canMove(movingDirection)){
+            rc.move(movingDirection);
+        } else  {
+            System.out.println("failed to move to " + movingTo);
+        }
+        return robotsNearby;
+
+    }
+
+
+
     //PUT ALL THE ROLE CODES HERE
     static void runExplorer(int ecID, MapLocation ecLocation) throws GameActionException {
         int thisID = rc.getID();
+        RobotType type = rc.getType();
         //if its next to an enlightenment center, use that to decide its destination (by going in the opposite direction)
         for (RobotInfo robot : rc.senseNearbyRobots()) {
             if (robot.type == RobotType.ENLIGHTENMENT_CENTER) {
@@ -367,7 +494,19 @@ public strictfp class RobotPlayer {
                 ECCords = robot.location;
             }
         }
+        Direction direction = rc.getLocation().directionTo(ECCords).opposite();
 
+        while (rc.onTheMap(findFarthest(direction, rc.getLocation(), type))){
+            if (rc.isReady()){
+                RobotInfo[] nearbyRobots = moveTowards(direction, type);
+                System.out.println("bytes after moving " + Clock.getBytecodeNum());
+            } else {
+                RobotInfo[] nearbyRobots = rc.senseNearbyRobots();
+            }
+
+
+            Clock.yield();
+        }
 
 
     }
