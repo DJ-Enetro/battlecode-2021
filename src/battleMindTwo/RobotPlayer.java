@@ -1,14 +1,15 @@
+//version 2.1
+
 package battleMindTwo;
 import battlecode.common.*;
 import java.util.ArrayList;
 
-
-
 public strictfp class RobotPlayer {
-
     static RobotController rc;
-    static int robotsSpawned = 0;
-    static ArrayList<Integer> locationSeekerIDs = new ArrayList<Integer>();
+    static ArrayList<Integer> xyCoords = new ArrayList<Integer>();
+    static ArrayList<Double> passability = new ArrayList<Double>();
+    static int explorerMuckrakers;
+    static int moveOrder;
 
     static final RobotType[] spawnableRobot = {
             RobotType.POLITICIAN,
@@ -26,6 +27,8 @@ public strictfp class RobotPlayer {
             Direction.WEST,
             Direction.NORTHWEST,
     };
+    static final Integer[] directionIndexes = {0, 1, 2, 3, 4, 5, 6, 7};
+
 
     static int turnCount;
 
@@ -49,7 +52,7 @@ public strictfp class RobotPlayer {
             try {
                 // Here, we've separated the controls into a different method for each RobotType.
                 // You may rewrite this into your own control structure if you wish.
-                System.out.println("I'm a " + rc.getType() + "! Location " + rc.getLocation());
+                System.out.println("This " + rc.getType() + " at " + rc.getLocation() + " currently has " + rc.getConviction() + " conviction. (ID #" + rc.getID() + ")");
                 switch (rc.getType()) {
                     case ENLIGHTENMENT_CENTER: runEnlightenmentCenter(); break;
                     case POLITICIAN:           runPolitician();          break;
@@ -68,27 +71,37 @@ public strictfp class RobotPlayer {
     }
 
     static void runEnlightenmentCenter() throws GameActionException {
+        // Sets the EC coordinates and muckraker IDs to variables
+        MapLocation myCoords = rc.getLocation();
 
-        MapLocation ECCords = rc.getLocation();
-        if (robotsSpawned < 8) {
-            if (rc.canBuildRobot(RobotType.MUCKRAKER, directions[robotsSpawned], 1)) {
-                rc.buildRobot(RobotType.MUCKRAKER, directions[robotsSpawned], 1);
-                locationSeekerIDs.add(rc.senseRobotAtLocation(rc.adjacentLocation(directions[robotsSpawned])).getID());
-                robotsSpawned += 1;
+        int losli = checkMostOccupiedSpawnLocationIndex() + 1;
+        int muckrakerID = 0;
+
+
+        if (rc.getRobotCount() < 9) {
+        // First 3 bits of moveOrder are a direction from 0-7 in the directions[] array
+        // the last 2 bits are SYN and ACK, respectively.
+
+        // Gives an order to the muckraker to move in a certain direction
+            if (rc.canBuildRobot(RobotType.MUCKRAKER, directions[losli], 1)) {
+                rc.buildRobot(RobotType.MUCKRAKER, directions[losli], 1);
+                moveOrder = (losli << 2) + 2;
+                rc.setFlag(moveOrder);
+                muckrakerID = rc.senseRobotAtLocation(myCoords.add(directions[checkMostOccupiedSpawnLocationIndex()])).getID();
+
+                while (rc.getFlag(muckrakerID) == 0) {
+                    if (rc.getFlag(muckrakerID) == (moveOrder + 1)) {
+                        // When the muckraker has both syn and ack flags on (last two bits are 1) set the ack flag of the EC to 1
+                        moveOrder += 1;
+                        rc.setFlag(moveOrder);
+                        break;
+                    }
+                }
             }
         }
 
-    /*   RobotType toBuild = randomSpawnableRobotType();
-    *
-    *    int influence = 50;
-    *    for (Direction dir : directions) {
-    *        if (rc.canBuildRobot(toBuild, dir, influence)) {
-    *            rc.buildRobot(toBuild, dir, influence);
-    *        } else {
-    *            break;
-    *        }
-    *    }
-    */
+
+        // Code that makes the bot bid 2 influence for a vote 1/3 of the time, otherwise 1 influence
         if (Math.floor(Math.random() * 30) > 19) {
             if (rc.canBid(2)) {
                 rc.bid(2);
@@ -103,39 +116,60 @@ public strictfp class RobotPlayer {
     }
 
     static void runPolitician() throws GameActionException {
-        Team enemy = rc.getTeam().opponent();
-        int actionRadius = rc.getType().actionRadiusSquared;
-        RobotInfo[] attackable = rc.senseNearbyRobots(actionRadius, enemy);
-        if (attackable.length != 0 && rc.canEmpower(actionRadius)) {
-            System.out.println("empowering...");
-            rc.empower(actionRadius);
-            System.out.println("empowered");
-            return;
-        }
-        tryMove(randomDirection());
+
     }
 
     static void runSlanderer() throws GameActionException {
-        tryMove(randomDirection());
+
     }
 
     static void runMuckraker() throws GameActionException {
-    /*  Team enemy = rc.getTeam().opponent();
-    *   int actionRadius = rc.getType().actionRadiusSquared;
-    *   for (RobotInfo robot : rc.senseNearbyRobots(actionRadius, enemy)) {
-    *       if (robot.type.canBeExposed()) {
-    *           // It's a slanderer... go get them!
-    *           if (rc.canExpose(robot.location)) {
-    *               System.out.println("e x p o s e d");
-    *               rc.expose(robot.location);
-    *               return;
-    *           }
-    *       }
-    *   }
-    */
         int myID = rc.getID();
-        if ((locationSeekerIDs.indexOf(myID)) != -1) {
-            tryMove(directions[locationSeekerIDs.indexOf(rc.getID())]);
+        int ecID = -1;
+        int myFlag = rc.getFlag(myID);
+
+        Team enemy = rc.getTeam().opponent();
+        int actionRadius = rc.getType().actionRadiusSquared;
+        for (RobotInfo robot : rc.senseNearbyRobots(actionRadius, enemy)) {
+            if (robot.type.canBeExposed()) {
+                // It's a slanderer... go get them!
+                if (rc.canExpose(robot.location)) {
+                    System.out.println("e x p o s e d");
+                    rc.expose(robot.location);
+                    return;
+                }
+            }
+        }
+
+
+        if (myFlag == 0) {
+            for (RobotInfo robot : rc.senseNearbyRobots(2, rc.getTeam())) {
+                if (robot.type == RobotType.ENLIGHTENMENT_CENTER) {
+                    ecID = robot.ID;
+                }
+            }
+            if (rc.canGetFlag(ecID)) {
+                rc.setFlag(rc.getFlag(ecID) + 1);
+            }
+        } else {
+            tryMove(directions[(myFlag - 3) >> 2]);
+        }
+
+
+    }
+
+    static int checkMostOccupiedSpawnLocationIndex() throws GameActionException {
+        MapLocation myCoords = rc.getLocation();
+        int highestDirectionIndex = -1;
+        for (int x : directionIndexes) {
+            if (rc.isLocationOccupied(myCoords.add(directions[x]))) {
+                highestDirectionIndex = x;
+            }
+        }
+        if (highestDirectionIndex == -1) {
+            return -1;
+        } else {
+            return highestDirectionIndex;
         }
     }
 
@@ -165,10 +199,10 @@ public strictfp class RobotPlayer {
      * @throws GameActionException
      */
     static boolean tryMove(Direction dir) throws GameActionException {
-        System.out.println("Attempting to move " + dir + "; " + rc.isReady() + " " + rc.getCooldownTurns() + " " + rc.canMove(dir));
+        System.out.println("Attempting to move " + dir + "; Action cooldown: " + rc.getCooldownTurns());
         if (rc.canMove(dir)) {
             rc.move(dir);
-            System.out.println("I moved!");
+            System.out.println("Move successful");
             return true;
         } else return false;
     }
