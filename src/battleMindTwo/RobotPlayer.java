@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 //Version 2.2
 
 // NOTE! The politicians do not work as intended; for some reason they try to move to a point that's not on the map...
@@ -43,20 +42,6 @@ public strictfp class RobotPlayer {
 
     // static Integer[] slandererX = {1, 2};
     // static Integer[] slandererY = {2, 1};
-=======
-//version 2.1
-
-package battleMindTwo;
-import battlecode.common.*;
-import java.util.ArrayList;
-
-public strictfp class RobotPlayer {
-    static RobotController rc;
-    static ArrayList<Integer> xyCoords = new ArrayList<Integer>();
-    static ArrayList<Double> passability = new ArrayList<Double>();
-    static int explorerMuckrakers;
-    static int moveOrder;
->>>>>>> eac2d24965f01b416ff50501fc829726497258d7
 
     static final RobotType[] spawnableRobot = {
             RobotType.POLITICIAN,
@@ -92,7 +77,6 @@ public strictfp class RobotPlayer {
 
         turnCount = 0;
 
-<<<<<<< HEAD
         diagonals.add(Direction.NORTHEAST);
         diagonals.add(Direction.SOUTHEAST);
         diagonals.add(Direction.SOUTHWEST);
@@ -121,11 +105,6 @@ public strictfp class RobotPlayer {
             turnCount += 1;
             myCoords = rc.getLocation();
 
-=======
-        System.out.println("I'm a " + rc.getType() + " and I just got created!");
-        while (true) {
-            turnCount += 1;
->>>>>>> eac2d24965f01b416ff50501fc829726497258d7
             // Try/catch blocks stop unhandled exceptions, which cause your robot to freeze
             try {
                 // Here, we've separated the controls into a different method for each RobotType.
@@ -150,7 +129,6 @@ public strictfp class RobotPlayer {
 
     static void runEnlightenmentCenter() throws GameActionException {
         // Sets the EC coordinates and muckraker IDs to variables
-<<<<<<< HEAD
 
         MapLocation myCoords = rc.getLocation();
 
@@ -195,40 +173,21 @@ public strictfp class RobotPlayer {
             // the last 2 bits are SYN and ACK, respectively.
 
             // Gives an order to the muckraker to move in a certain direction
-=======
-        MapLocation myCoords = rc.getLocation();
-
-        int losli = checkMostOccupiedSpawnLocationIndex() + 1;
-        int muckrakerID = 0;
-
-
-        if (rc.getRobotCount() < 9) {
-        // First 3 bits of moveOrder are a direction from 0-7 in the directions[] array
-        // the last 2 bits are SYN and ACK, respectively.
-
-        // Gives an order to the muckraker to move in a certain direction
->>>>>>> eac2d24965f01b416ff50501fc829726497258d7
             if (rc.canBuildRobot(RobotType.MUCKRAKER, directions[losli], 1)) {
                 rc.buildRobot(RobotType.MUCKRAKER, directions[losli], 1);
                 moveOrder = (losli << 2) + 2;
                 rc.setFlag(moveOrder);
-<<<<<<< HEAD
                 muckrakerID = rc.senseRobotAtLocation(myCoords.add(directions[checkMostOccupiedMuckrakerSpawnLocationIndex()])).getID();
                 muckrakerIDs.add(muckrakerID);
                 muckrakerSpawned += 1;
 
                 // Set the muckraker's command while its flag is 0
-=======
-                muckrakerID = rc.senseRobotAtLocation(myCoords.add(directions[checkMostOccupiedSpawnLocationIndex()])).getID();
-
->>>>>>> eac2d24965f01b416ff50501fc829726497258d7
                 while (rc.getFlag(muckrakerID) == 0) {
                     if (rc.getFlag(muckrakerID) == (moveOrder + 1)) {
                         // When the muckraker has both syn and ack flags on (last two bits are 1) set the ack flag of the EC to 1
                         moveOrder += 1;
                         rc.setFlag(moveOrder);
                         break;
-<<<<<<< HEAD
                     } else {
                         Clock.yield();
                     }
@@ -272,14 +231,11 @@ public strictfp class RobotPlayer {
                         } else {
                             Clock.yield();
                         }
-=======
->>>>>>> eac2d24965f01b416ff50501fc829726497258d7
                     }
                 }
             }
         }
 
-<<<<<<< HEAD
         if (rc.getRoundNum() > 30) {
             for (MapLocation loc : neutralBuildingLocations) {
 
@@ -335,25 +291,11 @@ public strictfp class RobotPlayer {
             if (rc.canBid(normalBid)) {
                 rc.bid(normalBid);
                 System.out.println("Bidding " + normalBid + " influence for this round's vote...");
-=======
-
-        // Code that makes the bot bid 2 influence for a vote 1/3 of the time, otherwise 1 influence
-        if (Math.floor(Math.random() * 30) > 19) {
-            if (rc.canBid(2)) {
-                rc.bid(2);
-                System.out.println("Bidding 2 influence for this round's vote...");
-            }
-        } else {
-            if (rc.canBid(1)) {
-                rc.bid(1);
-                System.out.println("Bidding 1 influence for this round's vote...");
->>>>>>> eac2d24965f01b416ff50501fc829726497258d7
             }
         }
     }
 
     static void runPolitician() throws GameActionException {
-<<<<<<< HEAD
         // Tentative: politicians only spawn to take control of neutral ECs
         MapLocation myCoords = rc.getLocation();
         // Newly created bots will always have a flag of 0
@@ -481,19 +423,6 @@ public strictfp class RobotPlayer {
         int myFlag = rc.getFlag(myID);
         MapLocation myCoords = rc.getLocation();
         RobotInfo[] surroundings = rc.senseNearbyRobots();
-=======
-
-    }
-
-    static void runSlanderer() throws GameActionException {
-
-    }
-
-    static void runMuckraker() throws GameActionException {
-        int myID = rc.getID();
-        int ecID = -1;
-        int myFlag = rc.getFlag(myID);
->>>>>>> eac2d24965f01b416ff50501fc829726497258d7
 
         Team enemy = rc.getTeam().opponent();
         int actionRadius = rc.getType().actionRadiusSquared;
@@ -509,7 +438,6 @@ public strictfp class RobotPlayer {
         }
 
 
-<<<<<<< HEAD
 
         for (RobotInfo info : surroundings) {
             // Since the only neutral buildings are neutral ECs...
@@ -536,13 +464,10 @@ public strictfp class RobotPlayer {
 
 
         // Newly created muckrakers will have a flag of 0
-=======
->>>>>>> eac2d24965f01b416ff50501fc829726497258d7
         if (myFlag == 0) {
             for (RobotInfo robot : rc.senseNearbyRobots(2, rc.getTeam())) {
                 if (robot.type == RobotType.ENLIGHTENMENT_CENTER) {
                     ecID = robot.ID;
-<<<<<<< HEAD
                     // This gets the ID of the adjacent enlightenment center
                     break;
                 }
@@ -655,21 +580,6 @@ public strictfp class RobotPlayer {
     }
 
     static int checkMostOccupiedMuckrakerSpawnLocationIndex() throws GameActionException {
-=======
-                }
-            }
-            if (rc.canGetFlag(ecID)) {
-                rc.setFlag(rc.getFlag(ecID) + 1);
-            }
-        } else {
-            tryMove(directions[(myFlag - 3) >> 2]);
-        }
-
-
-    }
-
-    static int checkMostOccupiedSpawnLocationIndex() throws GameActionException {
->>>>>>> eac2d24965f01b416ff50501fc829726497258d7
         MapLocation myCoords = rc.getLocation();
         int highestDirectionIndex = -1;
         for (int x : directionIndexes) {
@@ -677,21 +587,16 @@ public strictfp class RobotPlayer {
                 highestDirectionIndex = x;
             }
         }
-<<<<<<< HEAD
 
         if (rc.getRoundNum() > (int) (Math.floor(7 * (2 / rc.sensePassability(myCoords) + 1)) + 1)) {
             return 13;
         } else if (highestDirectionIndex == -1) {
-=======
-        if (highestDirectionIndex == -1) {
->>>>>>> eac2d24965f01b416ff50501fc829726497258d7
             return -1;
         } else {
             return highestDirectionIndex;
         }
     }
 
-<<<<<<< HEAD
     static void swerveAroundCardinal() throws GameActionException {
         int myID = rc.getID();
         int myFlag = rc.getFlag(myID);
@@ -803,8 +708,6 @@ public strictfp class RobotPlayer {
         }
     }
 
-=======
->>>>>>> eac2d24965f01b416ff50501fc829726497258d7
     /**
      * Returns a random Direction.
      *
