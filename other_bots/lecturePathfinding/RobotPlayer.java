@@ -107,8 +107,13 @@ public strictfp class RobotPlayer {
     }
 
     static MapLocation getLocationFromFlag(int flag) {
+<<<<<<< HEAD
         int y = ((flag << NBITS) >>> 2) & BITMASK;
         int x = (flag >> 9) & BITMASK;
+=======
+        int y = flag & BITMASK;
+        int x = (flag >> NBITS) & BITMASK;
+>>>>>>> eac2d24965f01b416ff50501fc829726497258d7
         // int extraInformation = flag >> (2*NBITS);
 
         MapLocation currentLocation = rc.getLocation();
