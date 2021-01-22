@@ -2,7 +2,7 @@
 
 // NOTE! The politicians do not work as intended; for some reason they try to move to a point that's not on the map...
 
-package battleMindTwo;
+package battleMind2B3;
 import battlecode.common.*;
 
 import java.util.ArrayList;
@@ -21,11 +21,13 @@ public strictfp class RobotPlayer {
     static int swerveAroundCardinal = 0;
     static int swerveAroundDiagonal = 0;
     static int spawnedSlanderers = 0;
+    static int muckrakerRing;
+
 
     //Arrays for and the number of each type of robot, so at the beginning of every round the enlightenment center can check to see if its bots have any new info
     static int politicianSpawned = 0;
     static int slandererSpawned = 0;
-    static int muckrakerSpawned = 0;
+
     static ArrayList <Integer> politicianIDs = new ArrayList <Integer>();
     static ArrayList <Integer> slandererIDs = new ArrayList <Integer>();
     static ArrayList <Integer> muckrakerIDs = new ArrayList <Integer>();
@@ -33,12 +35,14 @@ public strictfp class RobotPlayer {
     static MapLocation myCoords;
     static int myID;
     static int myFlag;
+    static ArrayList <Direction> spawnableDirections = new ArrayList<>();
 
     //Integers for Politicians/Slanderers/Muckrakers
     static int ecID;
 
     static ArrayList <Direction> diagonals = new ArrayList <Direction>();
     static ArrayList <Direction> cardinals = new ArrayList <Direction>();
+    static ArrayList <Direction> directionArray = new ArrayList <Direction>();
 
     // static Integer[] slandererX = {1, 2};
     // static Integer[] slandererY = {2, 1};
@@ -59,6 +63,8 @@ public strictfp class RobotPlayer {
             Direction.WEST,
             Direction.NORTHWEST,
     };
+
+
     static final Integer[] directionIndexes = {0, 1, 2, 3, 4, 5, 6, 7};
 
 
@@ -86,6 +92,15 @@ public strictfp class RobotPlayer {
         cardinals.add(Direction.EAST);
         cardinals.add(Direction.SOUTH);
         cardinals.add(Direction.WEST);
+
+        directionArray.add(Direction.NORTH);
+        directionArray.add(Direction.NORTHEAST);
+        directionArray.add(Direction.EAST);
+        directionArray.add(Direction.SOUTHEAST);
+        directionArray.add(Direction.SOUTH);
+        directionArray.add(Direction.SOUTHWEST);
+        directionArray.add(Direction.WEST);
+        directionArray.add(Direction.NORTHWEST);
 
         System.out.println("I'm a " + rc.getType() + " and I just got created!");
 
@@ -132,8 +147,27 @@ public strictfp class RobotPlayer {
 
         MapLocation myCoords = rc.getLocation();
 
-        int losli = (checkMostOccupiedMuckrakerSpawnLocationIndex() + 1);
+        // int losli = (checkMostOccupiedMuckrakerSpawnLocationIndex() + 1);
         int muckrakerID = 0;
+
+        // This if statement below gets the squares adjacent to the enlightenment center that are on the map
+        // so the bot will not return an error if the EC is on the map's edge/corner
+
+        if (turnCount == 1) {
+            for (Direction dir : directions) {
+                if (rc.onTheMap(myCoords.add(dir))) {
+                    spawnableDirections.add(dir);
+                }
+            }
+        }
+
+
+        if (rc.getRoundNum() % 200 == 0) {
+            muckrakerRing = 0;
+        }
+
+        // do the bots continue to exist or have an important location they identified for the EC to take note of?
+        // This code handles those situations
 
         for (Integer id : muckrakerIDs) {
 
@@ -147,8 +181,13 @@ public strictfp class RobotPlayer {
             int muckrakerFlag = rc.getFlag(id);
 
             if (muckrakerFlag > (1 << 23)) {
+                // If bit 23 is set to 1, meaning that the bot hit the edge of the map
+
                 MapLocation detectedNeutralEC = getDestinationFromFlag(muckrakerFlag);
-                neutralBuildingLocations.add(detectedNeutralEC);
+                if (! (neutralBuildingLocations.contains(detectedNeutralEC))) {
+                    neutralBuildingLocations.add(detectedNeutralEC);
+                }
+
                 rc.setFlag(muckrakerFlag + 2);
                 while (rc.getFlag(id) == muckrakerFlag) {
                     if (rc.getFlag(id) == (muckrakerFlag + 2)) {
@@ -157,29 +196,44 @@ public strictfp class RobotPlayer {
                 }
             }
         }
+
         for (Integer id : politicianIDs) {
 
             // Remove this bot's ID from the ArrayList of muckraker IDs as this bot is probably dead
             if (! rc.canGetFlag(id)) {
                 muckrakerIDs.remove(id);
-                continue;
             }
             // Check if (flag > 2^23)?
 
         }
 
-        if (losli < 8) {
+        // muckrakerRing is set to 0 every 200 rounds and for every muckraker spawned and coded incremented by 1
+        // until it equals the length of the spawnableDirections array
+
+        if (muckrakerRing != spawnableDirections.size()) {
             // First 3 bits of moveOrder are a direction from 0-7 in the directions[] array
             // the last 2 bits are SYN and ACK, respectively.
+            int codedDirection;
+            int j = 0;
 
             // Gives an order to the muckraker to move in a certain direction
-            if (rc.canBuildRobot(RobotType.MUCKRAKER, directions[losli], 1)) {
-                rc.buildRobot(RobotType.MUCKRAKER, directions[losli], 1);
-                moveOrder = (losli << 2) + 2;
+            if (rc.canBuildRobot(RobotType.MUCKRAKER, spawnableDirections.get(muckrakerRing), 1)) {
+                rc.buildRobot(RobotType.MUCKRAKER, spawnableDirections.get(muckrakerRing), 1);
+
+
+                for (Direction dir : directions) {
+                    if (spawnableDirections.get(muckrakerRing) != dir) {
+                        j += 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                moveOrder = (j << 2) + 2;
                 rc.setFlag(moveOrder);
-                muckrakerID = rc.senseRobotAtLocation(myCoords.add(directions[checkMostOccupiedMuckrakerSpawnLocationIndex()])).getID();
+                muckrakerID = rc.senseRobotAtLocation(myCoords.add(spawnableDirections.get(muckrakerRing))).getID();
                 muckrakerIDs.add(muckrakerID);
-                muckrakerSpawned += 1;
+                muckrakerRing += 1;
 
                 // Set the muckraker's command while its flag is 0
                 while (rc.getFlag(muckrakerID) == 0) {
@@ -198,11 +252,11 @@ public strictfp class RobotPlayer {
 
         int slandererID = 0;
 
-        if (losli == 14) {
+        if (muckrakerRing == spawnableDirections.size()) {
             // Tentative: this is where the slanderer that generates income stays for now
             // Also only 1 slanderer per EC
 
-            MapLocation slandererSpot = myCoords.translate(1, 2);
+            MapLocation slandererSpot = myCoords.translate(1, -3);
             Direction selectedDirection = randomDirection();
 
             if (slandererSpawned != 1) {
@@ -276,10 +330,9 @@ public strictfp class RobotPlayer {
         }
 
         // EC bids 2 influence for a vote 1/3 of the time, otherwise 1 influence
-
-        int normalBid = (int) Math.floor(1 * Math.floor((int) (rc.getRoundNum() / 300)));
-        int chanceBid = (int) Math.floor(2 * Math.floor((int) (rc.getRoundNum() / 300)));
-
+        int phase = (rc.getRoundNum() / 300);
+        int normalBid = (int) (Math.floor(phase) + 1);
+        int chanceBid = 2 * normalBid;
 
 
         if (Math.floor(Math.random() * 30) > 19) {
@@ -333,8 +386,8 @@ public strictfp class RobotPlayer {
             // from only one
 
             if (rc.canSenseLocation(destination)) {
-                if (myCoords.distanceSquaredTo(destination) <= 5) {
-                    int empowerRadius = myCoords.distanceSquaredTo(destination);
+                int empowerRadius = myCoords.distanceSquaredTo(destination);
+                if (empowerRadius <= 5) {
                     if (rc.canEmpower(empowerRadius)) {
                         rc.empower(empowerRadius);
                         System.out.println("empowered!");
@@ -356,18 +409,22 @@ public strictfp class RobotPlayer {
 
 
         // If you can't move in the direction you planned to...
-        if (! (rc.canMove(myCoords.directionTo(getDestinationFromFlag(myFlag))))) {
+        Direction bearing = myCoords.directionTo(getDestinationFromFlag(myFlag));
+
+        if (! (rc.canMove(bearing))) {
             // If this robot is not on the map's edge...
-            if (rc.onTheMap(myCoords.add(myCoords.directionTo(getDestinationFromFlag(myFlag))))) {
-                //
-                if (rc.canSenseLocation(myCoords.add(myCoords.directionTo(getDestinationFromFlag(myFlag))))) {
-                    if (!(rc.senseRobotAtLocation(myCoords.add(myCoords.directionTo(getDestinationFromFlag(myFlag)))) == null)) {
-                        Team detected = rc.senseRobotAtLocation(myCoords.add(myCoords.directionTo(getDestinationFromFlag(myFlag)))).getTeam();
-                        System.out.println("Obstacle of " + detected + " detected!");
-                        if (cardinals.contains(myCoords.directionTo(getDestinationFromFlag(myFlag)))) {
-                            swerveAroundCardinal();
-                        } else {
-                            swerveAroundDiagonal();
+            if (rc.getCooldownTurns() < 1) {
+                if (rc.onTheMap(myCoords.add(bearing))) {
+                    //
+                    if (rc.canSenseLocation(myCoords.add(bearing))) {
+                        if (!(rc.senseRobotAtLocation(myCoords.add(bearing)) == null)) {
+                            Team detected = rc.senseRobotAtLocation(myCoords.add(bearing)).getTeam();
+                            System.out.println("Obstacle of " + detected + " detected!");
+                            if (cardinals.contains(bearing)) {
+                                swerveAroundCardinal();
+                            } else {
+                                swerveAroundDiagonal();
+                            }
                         }
                     }
                 }
@@ -437,8 +494,6 @@ public strictfp class RobotPlayer {
             }
         }
 
-
-
         for (RobotInfo info : surroundings) {
             // Since the only neutral buildings are neutral ECs...
 
@@ -464,6 +519,7 @@ public strictfp class RobotPlayer {
 
 
         // Newly created muckrakers will have a flag of 0
+
         if (myFlag == 0) {
             for (RobotInfo robot : rc.senseNearbyRobots(2, rc.getTeam())) {
                 if (robot.type == RobotType.ENLIGHTENMENT_CENTER) {
@@ -476,24 +532,41 @@ public strictfp class RobotPlayer {
             if (rc.canGetFlag(ecID)) {
                 rc.setFlag(rc.getFlag(ecID) + 1);
             }
-        } else if (! (rc.canMove(directions[(myFlag - 3) >> 2]))) {
-            if (rc.onTheMap(myCoords.add(myCoords.directionTo(getDestinationFromFlag(myFlag))))) {
-                if (rc.canSenseLocation(myCoords.add(myCoords.directionTo(getDestinationFromFlag(myFlag))))) {
-                    if (!(rc.senseRobotAtLocation(myCoords.add(myCoords.directionTo(getDestinationFromFlag(myFlag)))) == null)) {
-                        Team detected = rc.senseRobotAtLocation(myCoords.add(myCoords.directionTo(getDestinationFromFlag(myFlag)))).getTeam();
-                        System.out.println("Obstacle of " + detected + " detected!");
-                        if (((myFlag - 3) >> 2) % 2 == 0) {
-                            swerveAroundCardinal();
-                        } else {
-                            swerveAroundDiagonal();
+        }
+
+        if ((((myFlag - 3) >> 2) >= 0) && ((((myFlag - 3) >> 2)) <= 7)) {
+            if (!(rc.canMove(directions[(myFlag - 3) >> 2]))) {
+                if (rc.onTheMap(myCoords.add(myCoords.directionTo(getDestinationFromFlag(myFlag))))) {
+                    if (rc.canSenseLocation(myCoords.add(myCoords.directionTo(getDestinationFromFlag(myFlag))))) {
+                        if (!(rc.senseRobotAtLocation(myCoords.add(myCoords.directionTo(getDestinationFromFlag(myFlag)))) == null)) {
+                            Team detected = rc.senseRobotAtLocation(myCoords.add(myCoords.directionTo(getDestinationFromFlag(myFlag)))).getTeam();
+                            System.out.println("Obstacle of " + detected + " detected!");
+                            if (((myFlag - 3) >> 2) % 2 == 0) {
+                                swerveAroundCardinal();
+                            } else {
+                                swerveAroundDiagonal();
+                            }
                         }
                     }
+                } else {
+                    int directionIndex = (myFlag >> 2) & 7;
+                    while (! rc.onTheMap(myCoords.add(directions[directionIndex]))) {
+                        directionIndex += 1;
+                        if (directionIndex == 8) {
+                            directionIndex = 0;
+                        }
+                    }
+                    int newFlag = (directionIndex << 2) + 3;
+
+                    rc.setFlag(newFlag);
+                    System.out.println("Turning...");
                 }
+            } else {
+                tryMove(myCoords.directionTo(getDestinationFromFlag(myFlag)));
+                System.out.println("Destination: " + getDestinationFromFlag(myFlag));
             }
-        } else {
-            tryMove(myCoords.directionTo(getDestinationFromFlag(myFlag)));
-            System.out.println("Destination: " + getDestinationFromFlag(myFlag));
         }
+
         Clock.yield();
 
     }
@@ -578,25 +651,25 @@ public strictfp class RobotPlayer {
             return actualLocation;
         }
     }
-
-    static int checkMostOccupiedMuckrakerSpawnLocationIndex() throws GameActionException {
-        MapLocation myCoords = rc.getLocation();
-        int highestDirectionIndex = -1;
-        for (int x : directionIndexes) {
-            if (rc.isLocationOccupied(myCoords.add(directions[x]))) {
-                highestDirectionIndex = x;
-            }
-        }
-
-        if (rc.getRoundNum() > (int) (Math.floor(7 * (2 / rc.sensePassability(myCoords) + 1)) + 1)) {
-            return 13;
-        } else if (highestDirectionIndex == -1) {
-            return -1;
-        } else {
-            return highestDirectionIndex;
-        }
-    }
-
+    /*
+    *static int checkMostOccupiedMuckrakerSpawnLocationIndex() throws GameActionException {
+    *    MapLocation myCoords = rc.getLocation();
+    *    int highestDirectionIndex = -1;
+    *    for (int x : directionIndexes) {
+    *        if (rc.isLocationOccupied(myCoords.add(directions[x]))) {
+    *            highestDirectionIndex = x;
+    *        }
+    *    }
+    *
+    *    if (rc.getRoundNum() > (int) (Math.floor(7 * (2 / rc.sensePassability(myCoords) + 1)) + 1)) {
+    *        return 13;
+    *    } else if (highestDirectionIndex == -1) {
+    *        return -1;
+    *    } else {
+    *        return highestDirectionIndex;
+    *    }
+    *}
+    */
     static void swerveAroundCardinal() throws GameActionException {
         int myID = rc.getID();
         int myFlag = rc.getFlag(myID);
@@ -619,6 +692,7 @@ public strictfp class RobotPlayer {
                         System.out.println("Timed out, moving " + dir);
                         break;
                     }
+                    step += 1;
                 } else {
                     tryMove((currentDirection).rotateRight());
                     step += 1;
@@ -635,6 +709,7 @@ public strictfp class RobotPlayer {
                         System.out.println("Timed out, moving " + dir);
                         break;
                     }
+                    step = 0;
                 } else {
                     tryMove((currentDirection).rotateLeft());
                     step = 0;
@@ -664,6 +739,7 @@ public strictfp class RobotPlayer {
                         System.out.println("Timed out, moving " + dir);
                         break;
                     }
+                    step += 1;
                 } else {
                     tryMove((currentDirection).rotateRight());
                     step += 1;
@@ -681,6 +757,7 @@ public strictfp class RobotPlayer {
                         System.out.println("Timed out, moving " + dir);
                         break;
                     }
+                    step += 1;
                 } else {
                     tryMove(currentDirection);
                     step += 1;
@@ -699,6 +776,7 @@ public strictfp class RobotPlayer {
                             break;
                         }
                     }
+                    step = 0;
                 } else {
                     tryMove((currentDirection).rotateLeft());
                     step = 0;
